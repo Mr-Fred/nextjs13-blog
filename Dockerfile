@@ -1,31 +1,26 @@
-FROM node:18.8-alpine as base
+# Use the official lightweight Node.js 18 image.
+# https://hub.docker.com/_/node
+FROM node:19-alpine
 
-FROM base as builder
+# Create and change to the app directory.
+WORKDIR /usr/src/app
 
-WORKDIR /home/node/app
-
-COPY ./package*.json ./
-
-COPY . .
-
-RUN yarn install
-
-RUN yarn build
-
-FROM base as runtime
-
-ENV NODE_ENV=production
-
-WORKDIR /home/node/app
-
+# Copy application dependency manifests to the container image.
+# A wildcard is used to ensure both package.json AND package-lock.json are copied.
+# Copying this separately prevents re-running npm install on every code change.
 COPY package*.json ./
 
-RUN yarn install --production
+# Install dependencies.
+# If you add a package-lock.json speed your build by switching to 'npm ci'.
+# RUN npm ci --only=production
+RUN npm install -g --only=production
+RUN npm run build
 
-COPY --from=builder /home/node/app/dist ./dist
-
-COPY --from=builder /home/node/app/build ./build
+# Copy local code to the container image.
+COPY . ./
+RUN pwd
 
 EXPOSE 8080
 
-CMD ["node", "dist/server.js"]
+# Run the web service on container startup.
+CMD ["npm", "start"]
